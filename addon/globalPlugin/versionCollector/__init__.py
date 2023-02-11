@@ -1,3 +1,9 @@
+# versionCollector/__init__.py
+# A part of the Version Collector NVDA add-on.
+# Copyright (C) 2023, Luke Davis <XLTechie@newanswertech.com>, all rights reserved.
+# This file is covered by the GNU General Public License version 2.
+# See the file COPYING for more details.
+
 from datetime import datetime
 from typing import Callable, Optional, List
 from dataclasses import dataclass
