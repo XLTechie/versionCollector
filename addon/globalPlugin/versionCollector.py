@@ -5,9 +5,12 @@ from dataclasses import dataclass
 import globalPluginHandler
 import appModuleHandler
 import api
+from addonHandler import initTranslation
 from logHandler import log
 from NVDAObjects import NVDAObject
 from scriptHandler import script
+
+initTranslation()
 
 @dataclass
 class _AppData:
