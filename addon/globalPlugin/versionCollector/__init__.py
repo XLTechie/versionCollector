@@ -161,16 +161,3 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			name=appName, version=appVersion, is64bit=is64bit,
 			lastSeen=datetime.timestamp(datetime.now()), extra=None
 		)
-
-	def _getAppModule(self, obj) -> "appModuleHandler.AppModule":
-		"""Retrieves the appModule representing the application the obj is a part of by
-		asking L{appModuleHandler}.
-		(Based on a private method in NVDA core.)
-		@return: the appModule
-		"""
-		if not hasattr(obj,'_appModuleRef'):
-			mod = appModuleHandler.getAppModuleForNVDAObject(obj)
-			if mod:
-				return mod
-		else:
-			return obj._appModuleRef()
