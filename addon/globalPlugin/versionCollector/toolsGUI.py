@@ -20,22 +20,25 @@ from addonHandler import initTranslation
 
 initTranslation()
 
-class VersionListDialog(wx.Dialog):
+class SoftwareInfoDialog(wx.Dialog):
 
-	def __init__(self, parent, *args, **kwargs):
+	def __init__(self, parent, apps: List[_AppData], *args, **kwargs):
+		# If we don't have a list of software, we shouldn't be here
+		if apps is None:
+			return
+		else:
+			appCount = len(apps)
+			if len(apps) < 1:
+				return
 		# Translators: The title of the Software Information dialog.
 		title = _("Detected Software Information")
 		super().__init__(parent, title=title)
-		mainSizer = wx.BoxSizer(wx.VERTICAL)
-		addonsSizerHelper = guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
-		self.addonUpdateInfo = addonUpdateInfo
-		self.auto = auto
-		self.updatesInstalled = updatesInstalled
-
-		if addonUpdateInfo:
-			addonUpdateCount = len(addonUpdateInfo)
-			if not updatesInstalled:
-				# Translators: Message displayed when add-on updates are available.
+		siSizer = wx.BoxSizer(wx.VERTICAL)
+		siSizerHelper = guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
+		# Translators: Message shown to describe the software info list
+		intro = _(
+			"The following software has been detected.\n"
+			"Select items of interest, then press copy to place on clipboard."
 				updateText = _("Add-on updates available: {updateCount}").format(updateCount=addonUpdateCount)
 			else:
 				# Translators: Message displayed when add-on updates were installed.

@@ -1,6 +1,6 @@
 # versionCollector/__init__.py
 # A part of the Version Collector NVDA add-on.
-# Copyright (C) 2023, Luke Davis <XLTechie@newanswertech.com>, all rights reserved.
+# Copyright (C) 2023, Luke Davis, Open Source Systems, Ltd. <XLTechie@newanswertech.com>, all rights reserved.
 # This file is covered by the GNU General Public License version 2.
 # See the file COPYING for more details.
 
@@ -10,17 +10,18 @@ from dataclasses import dataclass
 
 import globalPluginHandler
 import appModuleHandler
+import extensionPoints
 import api
-from addonHandler import initTranslation
 from logHandler import log
 from NVDAObjects import NVDAObject
 from scriptHandler import script
+from addonHandler import initTranslation
 
-import .toolsGUI
+from . import toolsGUI
 
 initTranslation()
 
-@dataclass
+@dataclass(repr=False, eq=False)
 class _AppData:
 	"""Properties representing a piece of software by its metadata.
 	Metadata includes name, version, bitness, and last seen timestamp.
@@ -45,12 +46,15 @@ class _AppData:
 		else:
 			return False
 
-#: The main in-memory listing of per-app metadata
+
 _appDataCache: List[_AppData] = []
-#: Represents whether the LHS of the cache needs to be updated on disk. Forces an immediate cache save.
+"""The main in-memory listing of per-app metadata"""
+
 _dirtyCache: bool = False
-#: Represents whether the RHS of the cache needs to be updated on disk. Doesn't force a cache save cycle.
+"""Represents whether the LHS of the cache needs to be updated on disk. Forces an immediate cache save."""
+
 _dirtyDates: bool = False
+"""Represents whether the RHS of the cache needs to be updated on disk. Doesn't force a cache save cycle."""
 
 def isCached(app: _AppData) -> bool:
 	if getCacheIndexOf(app) < 0:
@@ -120,7 +124,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Handle a strange case. This is mentioned in core code. May not be complete solution. FixMe
 		if obj.processHandle == 0:
 			return
-		currentApp = self.normalizeAppInfo(
+		currentApp: _AppData = self.normalizeAppInfo(
 			getattr(obj.appModule, "appName", None),
 			getattr(obj.appModule, "productName", None),
 			getattr(obj.appModule, "productVersion", None),
