@@ -16,19 +16,22 @@ from logHandler import log
 from NVDAObjects import NVDAObject
 from scriptHandler import script
 
+import .toolsGUI
+
 initTranslation()
 
 @dataclass
 class _AppData:
 	"""Properties representing a piece of software by its metadata.
 	Metadata includes name, version, bitness, and last seen timestamp.
-	When comparisons are made, the lastSeen is ignored.
+	When comparisons are made, the lastSeen and extra are ignored.
 	"""
-	__slots__ = [ "name", "is64bit", "version", "lastSeen" ]
+	__slots__ = [ "name", "version", "is64bit", "lastSeen", "extra" ]
 	name: str
-	is64bit: Optional[bool]
 	version: Optional[str]
+	is64bit: Optional[bool]
 	lastSeen: datetime.timestamp
+	extra: Optional[bool]  # Currently, only used to store enablement status for NVDA add-ons
 
 	def __eq__(self, other):
 		if not isinstance(other, _AppData):
@@ -93,7 +96,8 @@ def _logState(message: Optional[str] = None) -> None:
 		"\tThe cache is " + ("" if _dirtyCache else "not ") + "dirty.\n",
 		"\tThe cache contains:\n",
 		"\n".join(
-			f"\t{app.name} | {app.is64bit} | {app.version} | {app.lastSeen}" for app in _appDataCache
+			f"\t{app.name} | {app.is64bit} | {app.version} | {app.lastSeen} | {app.extra}"
+			for app in _appDataCache
 		)
 	)))
 
@@ -103,17 +107,17 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		super().__init__(*args, **kwargs)
 		self.currentApp: Optional[_AppData] = None
 		# Run our handler whenever the application changes
-		appModuleHandler.post_appSwitch.register(self.handleAppSwitch)
+		appModuleHandler.post_appSwitch.register(self.onAppSwitch)
 		_logState("Initializing...")
 
 	@script(gesture="kb:NVDA+Control+l", description="Temporary add-on action")
 	def script_logState(self, gesture):
 		_logState()
 
-	def handleAppSwitch(self):
+	def onAppSwitch(self):
 		"""Called as a registered extensionPoint, whenever appModuleHandler detects an application switch."""
 		obj = api.getForegroundObject()
-		# Handle a strange case. This is mentioned in core code. FixMe
+		# Handle a strange case. This is mentioned in core code. May not be complete solution. FixMe
 		if obj.processHandle == 0:
 			return
 		currentApp = self.normalizeAppInfo(
@@ -155,7 +159,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			appVersion = None
 		return _AppData(
 			name=appName, version=appVersion, is64bit=is64bit,
-			lastSeen=datetime.timestamp(datetime.now())
+			lastSeen=datetime.timestamp(datetime.now()), extra=None
 		)
 
 	def _getAppModule(self, obj) -> "appModuleHandler.AppModule":
