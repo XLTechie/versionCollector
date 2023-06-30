@@ -35,10 +35,11 @@ class SoftwareInfoDialog(wx.Dialog):
 		super().__init__(parent, title=title)
 		siSizer = wx.BoxSizer(wx.VERTICAL)
 		siSizerHelper = guiHelper.BoxSizerHelper(self, orientation=wx.VERTICAL)
-		# Translators: Message shown to describe the software info list
 		intro = _(
+			# Translators: Message shown to describe the software info list
 			"The following software has been detected.\n"
 			"Select items of interest, then press copy to place on clipboard."
+		)
 				updateText = _("Add-on updates available: {updateCount}").format(updateCount=addonUpdateCount)
 			else:
 				# Translators: Message displayed when add-on updates were installed.

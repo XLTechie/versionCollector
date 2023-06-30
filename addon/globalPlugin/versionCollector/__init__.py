@@ -52,10 +52,10 @@ class _AppData:
 
 	@property
 	def isAddonEnabled(self) -> Optional[bool]:
-	"""A property that checks whether an NVDA add-on is enabled, and
-	returns the status. Returns None if not an add-on.
-	"""
-	pass # FixMe
+		"""A property that checks whether an NVDA add-on is enabled, and
+		returns the status. Returns None if not an add-on.
+		"""
+		pass # FixMe
 
 
 _appDataCache: List[_AppData] = []
@@ -87,11 +87,11 @@ def updateLastDate(app, index: int) -> None:
 		if index < 0:  # Something weird is going on
 			raise RuntimeError(f"Was asked to update date for an item not in the cache! {app}")
 	_appDataCache[index].lastSeen = app.lastSeen
-		if (
-			_appDataCache[index].firstSeen == None
-			and app.firstSeen = None
-		):
-			_appDataCache[index].firstSeen = datetime.timestamp(datetime.now())
+	if (
+		_appDataCache[index].firstSeen == None
+		and app.firstSeen == None
+	):
+		_appDataCache[index].firstSeen = datetime.timestamp(datetime.now())
 	_dirtyDates = True
 
 def addToCache(app: _AppData, checked: bool = False) -> None:

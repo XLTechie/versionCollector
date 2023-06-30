@@ -42,7 +42,7 @@ Provides a list that can be copied/exported for diagnostics and support."""),
 	# Add-on update channel (default is None, denoting stable releases,
 	# and for development releases, use "dev".)
 	# Do not change unless you know what you are doing!
-	"addon_updateChannel": "dev",
+	"addon_updateChannel": None,
 	# Add-on license such as GPL 2
 	"addon_license": "GPL 2",
 	# URL for the license document the ad-on is licensed under
@@ -54,7 +54,7 @@ Provides a list that can be copied/exported for diagnostics and support."""),
 # or use glob expressions.
 # For example to include all files with a ".py" extension from the "globalPlugins" dir of your add-on
 # the list can be written as follows:
- pythonSources = ["addon/globalPlugins/*.py", "addon/globalPlugins/versionCollector/*.py"]
+pythonSources = ["addon/globalPlugins/*.py", "addon/globalPlugins/versionCollector/*.py"]
 # For more information on SCons Glob expressions please take a look at:
 # https://scons.org/doc/production/HTML/scons-user/apd.html
 
