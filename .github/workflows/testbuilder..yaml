@@ -1,0 +1,74 @@
+name: Build, release, and publish add-on
+            
+# Copyright (c) 2023, Luke Davis and Open Source Systems, Ltd..
+# If you use this script, I would like to hear about it, just for fun and ego. Email at <XLTechie@newanswertech.com>.
+# Released under the UNLICENSE. Find full terms at the end of the file.
+
+on:
+  push:
+    tags: ["*"]
+    # To build on main/master branch, uncomment the following line:
+    #branches: [ main, master, prime ]
+  pull_request:
+    branches: [ main, master, prime ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - run: echo -e "pre-commit\nscons\nmarkdown">requirements.txt
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.7
+        cache: 'pip'
+
+    - name: Install dependencies
+      run: |
+         python -m pip install --upgrade pip wheel
+        pip install -r requirements.txt
+        sudo apt-get update  -y
+        sudo apt-get install -y gettext
+
+    - name: Code checks
+      run: export SKIP=no-commit-to-branch; pre-commit run --all
+
+    - name: building addon
+      run: |
+        scons
+        scons pot
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: packaged_addon
+        path: |
+          ./*.nvda-addon
+          ./*.pot
+
+  upload_release:
+    runs-on: windows-latest
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs: ["build"]
+    steps:
+    - uses: actions/checkout@v3
+    - name: download releases files
+      uses: actions/download-artifact@v3
+    - name: Display structure of downloaded files
+      run: dir /b /s
+
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          packaged_addon/*.nvda-addon
+          packaged_addon/*.pot
+        fail_on_unmatched_files: true
+        prerelease: ${{ contains(github.ref, '-') }}
+      - shell: pwsh
+        run: "release_asset_url=${{ fromJSON(steps.Release.outputs.assets)[0].browser_download_url }}" >> $env:GITHUB_ENV
+    - name: Publish
+      - shell: pwsh
+        run: Write-Output "the release url was: ${{ env.release_asset_url }}"
