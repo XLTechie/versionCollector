@@ -12,13 +12,14 @@ import globalPluginHandler
 import addonHandler
 import extensionPoints
 import api
+import ui
 from logHandler import log
 from NVDAObjects import NVDAObject
 from scriptHandler import script
 from appModuleHandler import post_appSwitch
 from core import postNvdaStartup
 
-from . import toolsGUI
+#from . import toolsGUI
 
 
 @dataclass(repr=False, eq=False)
@@ -54,7 +55,7 @@ class _AppData:
 	"""A property that checks whether an NVDA add-on is enabled, and
 	returns the status. Returns None if not an add-on.
 	"""
-	return None
+	pass # FixMe
 
 
 _appDataCache: List[_AppData] = []
@@ -90,7 +91,7 @@ def updateLastDate(app, index: int) -> None:
 			_appDataCache[index].firstSeen == None
 			and app.firstSeen = None
 		):
-			_appDataCache[index].firstSeen = lastSeen=datetime.timestamp(datetime.now())
+			_appDataCache[index].firstSeen = datetime.timestamp(datetime.now())
 	_dirtyDates = True
 
 def addToCache(app: _AppData, checked: bool = False) -> None:
@@ -103,19 +104,19 @@ def addToCache(app: _AppData, checked: bool = False) -> None:
 	_dirtyCache = True
 	log.debug(f"Added an app to the cache. {app}")
 
-def _logState(message: Optional[str] = None) -> None:
-	"""A debugging function which writes everything the add-on knows to the log.
+def _showState(message: Optional[str] = None) -> None:
+	"""A debugging function which writes everything the add-on knows to a browseableMessage.
 	@param message An optional message to put at the top.
 	"""
 	#return  # Comment to disable this function
-	log.debug("".join((
-		"" if message is None else (message + "\n"),
-		"Dumping all in-memory data.\n",
-		"\tThe dates are " + ("" if _dirtyDates else "not ") + "dirty.\n",
-		"\tThe cache is " + ("" if _dirtyCache else "not ") + "dirty.\n",
-		"\tThe cache contains:\n",
+	ui.browseableMessage("\n".join((
+		"" if message is None else message,
+		"The dates are " + ("" if _dirtyDates else "not ") + "dirty.",
+		"The cache is " + ("" if _dirtyCache else "not ") + "dirty.",
+		"\nThe cache contains:\n",
 		"\n".join(
-			f"\t{app.name} | {app.is64bit} | {app.version} | {app.lastSeen} | {app.isAddonEnabled}"
+			f"{app.name}:\nis64bit: {app.is64bit}\nVersion: {app.version}\nIs Addon: {app.isAddon}\n"
+			f"First seen: {app.firstSeen}\nLast seen: {app.lastSeen}"
 			for app in _appDataCache
 		)
 	)))
@@ -129,11 +130,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		post_appSwitch.register(self.onAppSwitch)
 		# Become aware of all NVDA add-ons
 		postNvdaStartup.register(self.retrieveInstalledAddons)
-		_logState("Initializing...")
+
+	def terminate(self):
+		# Unregister the extensionPoints
+		post_appSwitch.unregister(self.onAppSwitch)
+		postNvdaStartup.unregister(self.retrieveInstalledAddons)
 
 	@script(gesture="kb:NVDA+Control+l", description="Temporary add-on action")
-	def script_logState(self, gesture):
-		_logState()
+	def script_showState(self, gesture):
+		_showState()
 
 	def onAppSwitch(self):
 		"""Called as a registered extensionPoint, whenever appModuleHandler detects an application switch."""
