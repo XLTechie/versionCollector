@@ -6,56 +6,42 @@
 
 from datetime import datetime
 from typing import Callable, Optional, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import globalPluginHandler
 import addonHandler
-import extensionPoints
 import api
 import ui
 from logHandler import log
 from NVDAObjects import NVDAObject
 from scriptHandler import script
+from globalCommands import SCRCAT_TOOLS
 from appModuleHandler import post_appSwitch
 from core import postNvdaStartup
 
 #from . import toolsGUI
 
 
-@dataclass(repr=False, eq=False)
+@dataclass(repr=False, eq=True)
 class _AppData:
 	"""Properties representing a piece of software by its metadata.
 	Metadata includes name, version, bitness, and last seen timestamp.
 	Because we also track NVDA add-ons, type (None for real programs) and state are stored.
 	When comparisons are made, the lastSeen, type, and isAddonEnabled are ignored.
 	"""
-	__slots__ = [ "name", "version", "is64bit", "firstSeen", "lastSeen", "isAddon" ]
 	name: str
-	isAddon: bool  # Set True if this record represents an NVDA add-on
-	lastSeen: datetime.timestamp
-	version: Optional[str]
-	is64bit: Optional[bool]
-	firstSeen: Optional[datetime.timestamp]
-
-	def __eq__(self, other):
-		if not isinstance(other, _AppData):
-			return False
-		if (
-			self.name == other.name
-			and self.version == other.version
-			and self.is64bit == other.is64bit
-			and self.isAddon == other.isAddon
-		):
-			return True
-		else:
-			return False
+	version: str = None
+	is64bit: Optional[bool] = None
+	lastSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
+	firstSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
+	isAddon: bool = False  # Set True if this record represents an NVDA add-on
 
 	@property
 	def isAddonEnabled(self) -> Optional[bool]:
 		"""A property that checks whether an NVDA add-on is enabled, and
 		returns the status. Returns None if not an add-on.
 		"""
-		pass # FixMe
+		return False # FixMe
 
 
 _appDataCache: List[_AppData] = []
@@ -73,15 +59,15 @@ def isCached(app: _AppData) -> bool:
 	else:
 		return True
 
-def getCacheIndexOf(app) -> int:
+def getCacheIndexOf(app: _AppData) -> int:
 	try:
 		ind = _appDataCache.index(app)
 	except ValueError:
 		ind = -1
 	return ind
 
-def updateLastDate(app, index: int) -> None:
-	global _dirtyDates
+def updateLastDate(app: _AppData, index: int) -> None:
+	global _dirtyDates, _appDataCache
 	if index < 0:  # We weren't given an index, yet some how the caller knows app is cached
 		index = getCacheIndexOf(app)
 		if index < 0:  # Something weird is going on
@@ -95,7 +81,7 @@ def updateLastDate(app, index: int) -> None:
 	_dirtyDates = True
 
 def addToCache(app: _AppData, checked: bool = False) -> None:
-	global _dirtyCache
+	global _dirtyCache, _appDataCache
 	if not checked:
 		if isCached(app):
 			raise RuntimeError(f"Tried to add an already cached app to the cache! {app}")
@@ -106,6 +92,7 @@ def addToCache(app: _AppData, checked: bool = False) -> None:
 
 def _showState(message: Optional[str] = None) -> None:
 	"""A debugging function which writes everything the add-on knows to a browseableMessage.
+
 	@param message An optional message to put at the top.
 	"""
 	#return  # Comment to disable this function
@@ -119,7 +106,7 @@ def _showState(message: Optional[str] = None) -> None:
 			f"First seen: {app.firstSeen}\nLast seen: {app.lastSeen}"
 			for app in _appDataCache
 		)
-	)))
+	)), title="Cache report")
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
@@ -131,16 +118,20 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		# Become aware of all NVDA add-ons
 		postNvdaStartup.register(self.retrieveInstalledAddons)
 
-	def terminate(self):
+	def terminate(self) -> None:
 		# Unregister the extensionPoints
 		post_appSwitch.unregister(self.onAppSwitch)
 		postNvdaStartup.unregister(self.retrieveInstalledAddons)
 
-	@script(gesture="kb:NVDA+Control+l", description="Temporary add-on action")
-	def script_showState(self, gesture):
+	@script(
+		gesture="kb:NVDA+control+shift+v",
+		description=_("View the Version Collector cache report"),
+		category=SCRCAT_TOOLS
+	)
+	def script_showState(self, gesture) -> None:
 		_showState()
 
-	def onAppSwitch(self):
+	def onAppSwitch(self) -> None:
 		"""Called as a registered extensionPoint, whenever appModuleHandler detects an application switch."""
 		obj = api.getForegroundObject()
 		# Handle a strange case. This is mentioned in core code. May not be complete solution. FixMe
@@ -164,10 +155,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		else:  # It's in the cache already, update the date only
 			updateLastDate(subject, ind)
 
-	def normalizeAppInfo(self, shortName: str, longName: str, version: str, is64bit: bool) -> _AppData:
+	@staticmethod
+	def normalizeAppInfo(shortName: str, longName: str, version: str, is64bit: bool) -> _AppData:
 		"""Returns an AppData representation of the passed app metadata.
 		It converts short and long names into a single (hopefully) non-repetitive name.
-		Sets the lastSeen property to now.
 		"""
 		if longName is None or longName == "":  # No longName
 			# If neither kind of name is set, this is a bad conversion, and we fail
@@ -187,15 +178,13 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		else:
 			appVersion = None
 		return _AppData(
-			name=appName, version=appVersion, is64bit=is64bit,
-			lastSeen=datetime.timestamp(datetime.now())
+			name=appName, version=appVersion, is64bit=is64bit
 		)
 
-	def retrieveInstalledAddons(self):
+	def retrieveInstalledAddons(self) -> None:
 		"""Processes the currently installed NVDA add-ons as if they were apps.
 		"""
 		for addon in addonHandler.getAvailableAddons():
 			self.addToCacheOrUpdateDate(_AppData(
-				name=addon.name, version=addon.version, isAddon=True, is64bit=False,
-				lastSeen=datetime.timestamp(datetime.now())
+				name=addon.name, version=addon.version, isAddon=True, is64bit=False
 			))

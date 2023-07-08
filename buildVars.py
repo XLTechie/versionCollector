@@ -26,7 +26,7 @@ addon_info = {
 	"addon_description": _("""Keeps a record of all software names and versions used while running NVDA.
 Provides a list that can be copied/exported for diagnostics and support."""),
 	# version
-	"addon_version": "23.00.01",
+	"addon_version": "23.00.005",
 	# Author(s)
 	"addon_author": "Luke Davis <XLTechie@newanswertech.com>",
 	# URL for the add-on documentation support
@@ -42,7 +42,7 @@ Provides a list that can be copied/exported for diagnostics and support."""),
 	# Add-on update channel (default is None, denoting stable releases,
 	# and for development releases, use "dev".)
 	# Do not change unless you know what you are doing!
-	"addon_updateChannel": None,
+	"addon_updateChannel": "dev",
 	# Add-on license such as GPL 2
 	"addon_license": "GPL 2",
 	# URL for the license document the ad-on is licensed under
