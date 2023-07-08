@@ -35,16 +35,16 @@ jobs:
     - name: building addon
       run: |
         scons
-        scons pot
+        #scons pot
 
     - uses: actions/upload-artifact@v3
       with:
         name: packaged_addon
         path: |
           ./*.nvda-addon
-          ./*.pot
 
   upload_release:
+    permissions: write-all
     runs-on: ubuntu-latest
     if: ${{ startsWith(github.ref, 'refs/tags/') }}
     needs: ["build"]
@@ -60,6 +60,5 @@ jobs:
       with:
         files: |
           packaged_addon/*.nvda-addon
-          packaged_addon/*.pot
         fail_on_unmatched_files: true
         prerelease: ${{ contains(github.ref, '-') }}
