@@ -35,6 +35,7 @@ class _AppData:
 	lastSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
 	firstSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
 	isAddon: bool = False  # Set True if this record represents an NVDA add-on
+	additional: Optional[str] = field(compare=False, default=None)
 
 	@property
 	def isAddonEnabled(self) -> Optional[bool]:
@@ -194,7 +195,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""
 		for addon in addonHandler.getAvailableAddons():
 			self.addToCacheOrUpdateDate(_AppData(
-				name=addon.name, version=addon.version, isAddon=True, is64bit=False
+				name=addon.summary, version=addon.version, isAddon=True, is64bit=False
 			))
 
 	@staticmethod
@@ -208,7 +209,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		else:
 			lineStart = ""
 			fieldStart = ""
-			fieldEnd = ", "
+			fieldEnd = "\t"
 			lineEnd = "\n"
 		returnable: str = ""
 		for appData in func():
@@ -241,15 +242,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		else:
 			return None
 
-	def getStructuredAppList(self, htmlMode=False) -> str:
+	def getStructuredAppList(self, useHTML=False) -> str:
 		return self.createStructuredList(
-			self.generateAppsOnly, htmlMode, hideFields=("isAddon", "isAddonEnabled"),
+			self.generateAppsOnly, useHTML, hideFields=("isAddon", "isAddonEnabled"),
 			transformFields={"is64bit": lambda x: "64 bit" if x else "32 bit"}
 		)
 
-	def getStructuredAddonList(self, htmlMode=False) -> str:
+	def getStructuredAddonList(self, useHTML=False) -> str:
 		return self.createStructuredList(
-			self.generateAddonsOnly, htmlMode, hideFields=("isAddon", "is64bit", "isAddonEnabled")
+			self.generateAddonsOnly, useHTML, hideFields=("isAddon", "is64bit", "isAddonEnabled")
 		)
 
 	def showHTMLReport(self) -> None:
