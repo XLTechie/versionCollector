@@ -5,7 +5,7 @@
 # See the file COPYING for more details.
 
 from datetime import datetime
-from typing import Callable, Optional, List
+from typing import Callable, Optional, List, Dict
 from dataclasses import dataclass, field
 
 import globalPluginHandler
@@ -130,6 +130,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	)
 	def script_showState(self, gesture) -> None:
 		_showState()
+		self.displayInHTML()
 
 	def onAppSwitch(self) -> None:
 		"""Called as a registered extensionPoint, whenever appModuleHandler detects an application switch."""
@@ -188,3 +189,74 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.addToCacheOrUpdateDate(_AppData(
 				name=addon.name, version=addon.version, isAddon=True, is64bit=False
 			))
+
+	@staticmethod
+	def createStructuredList(func: Callable, useHTML: bool = False, *, hideFields: tuple = (), transformFields: Dict[str, Callable] = {}) -> str:
+		"""Takes a generator of _AppData records, and returns their data in a structured way."""
+		if useHTML:
+			lineStart = "<tr>"
+			fieldStart = "<td>"
+			fieldEnd = "</td>"
+			lineEnd = "</tr>\n"
+		else:
+			lineStart = ""
+			fieldStart = ""
+			fieldEnd = ", "
+			lineEnd = "\n"
+		returnable: str = ""
+		for appData in func():
+			line: str = ""
+			for property in ("name", "version", "is64bit", "isAddon", "isAddonEnabled"):
+				if property not in hideFields:
+					if property in transformFields:
+						result = (transformFields[property])(getattr(appData, property))
+					else:
+						result = getattr(appData, property)
+					line += f"{fieldStart}{result}{fieldEnd}"
+			if line != "":
+				line = f"{lineStart}{line}{lineEnd}"
+				returnable += line
+		return returnable
+
+	@staticmethod
+	def generateAppsOnly() -> str:
+		for app in _appDataCache:
+			if not app.isAddon:
+				yield app
+		else:
+			return None
+
+	@staticmethod
+	def generateAddonsOnly() -> str:
+		for app in _appDataCache:
+			if app.isAddon:
+				yield app
+		else:
+			return None
+
+	def getStructuredAppList(self, htmlMode=False) -> str:
+		return self.createStructuredList(
+			self.generateAppsOnly, htmlMode, hideFields=("isAddon", "isAddonEnabled"),
+			transformFields={"is64bit": lambda x: "64 bit" if x else "32 bit"}
+		)
+
+	def getStructuredAddonList(self, htmlMode=False) -> str:
+		return self.createStructuredList(
+			self.generateAddonsOnly, htmlMode, hideFields=("isAddon", "is64bit", "isAddonEnabled")
+		)
+
+	def displayInHTML(self) -> None:
+		output = """		<table style="margin-left: auto; margin-right: auto;">
+		<caption>Application information:</caption>
+		<tr><th>NAME</th> <th>VERSION</th> <th>BITNESS</th> <tr>
+		"""
+		output += self.getStructuredAppList(True)
+		output += """</table><br><table style="margin-left: auto; margin-right: auto;">
+		<caption>List of NVDA add-ons:</caption>
+		<tr><th>NAME</th> <th>VERSION</th></tr>
+		"""
+		output += self.getStructuredAddonList(True)
+		output += """</table><br>
+		<p>Use shift+arrow keys to select, ctrl+c to copy to clipboard.</p>
+		<p>Press escape when done.</p></body></html>"""
+		ui.browseableMessage(output, "Detected apps, add-ons, and versions", True)
