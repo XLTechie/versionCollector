@@ -14,7 +14,7 @@ import api
 import ui
 from logHandler import log
 from NVDAObjects import NVDAObject
-from scriptHandler import script
+from scriptHandler import script, getLastScriptRepeatCount
 from globalCommands import SCRCAT_TOOLS
 from appModuleHandler import post_appSwitch
 from core import postNvdaStartup
@@ -117,6 +117,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		post_appSwitch.register(self.onAppSwitch)
 		# Become aware of all NVDA add-ons
 		postNvdaStartup.register(self.retrieveInstalledAddons)
+		# Sead the pond
+		self.onAppSwitch()
 
 	def terminate(self) -> None:
 		# Unregister the extensionPoints
@@ -125,12 +127,17 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	@script(
 		gesture="kb:NVDA+control+shift+v",
-		description=_("View the Version Collector cache report"),
+		description=_("View the Version Collector report. Press twice to copy a text version to the clipboard."),
 		category=SCRCAT_TOOLS
 	)
-	def script_showState(self, gesture) -> None:
-		_showState()
-		self.displayInHTML()
+	def script_showReport(self, gesture) -> None:
+		presses = getLastScriptRepeatCount()
+		if presses == 0:  # Pressed once
+			self.showHTMLReport()
+		elif presses == 1:  # Pressed twice
+			self.copyTextReport()
+		else:  # Pressed more than twice. Do nothing
+			return
 
 	def onAppSwitch(self) -> None:
 		"""Called as a registered extensionPoint, whenever appModuleHandler detects an application switch."""
@@ -245,7 +252,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 			self.generateAddonsOnly, htmlMode, hideFields=("isAddon", "is64bit", "isAddonEnabled")
 		)
 
-	def displayInHTML(self) -> None:
+	def showHTMLReport(self) -> None:
 		output = """		<table style="margin-left: auto; margin-right: auto;">
 		<caption>Application information:</caption>
 		<tr><th>NAME</th> <th>VERSION</th> <th>BITNESS</th> <tr>
@@ -260,3 +267,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		<p>Use shift+arrow keys to select, ctrl+c to copy to clipboard.</p>
 		<p>Press escape when done.</p></body></html>"""
 		ui.browseableMessage(output, "Detected apps, add-ons, and versions", True)
+
+	def copyTextReport(self) -> None:
+		output = "Applications:\n" + self.getStructuredAppList()
+		output += "\nNVDA Add-ons:\n" + self.getStructuredAddonList()
+		api.copyToClip(output)
+		# Translators: Message spoken when the text report has been copied to the clipboard.
+		ui.message(_("Application version report copied."))
