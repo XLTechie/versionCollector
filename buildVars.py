@@ -26,7 +26,7 @@ addon_info = {
 	"addon_description": _("""Keeps a record of all software names and versions used while running NVDA.
 Provides a list that can be copied/exported for diagnostics and support."""),
 	# version
-	"addon_version": "23.00.009",
+	"addon_version": "23.00.010",
 	# Author(s)
 	"addon_author": "Luke Davis <XLTechie@newanswertech.com>",
 	# URL for the add-on documentation support

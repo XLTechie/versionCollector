@@ -35,7 +35,7 @@ class _AppData:
 	lastSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
 	firstSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
 	isAddon: bool = False  # Set True if this record represents an NVDA add-on
-	additional: Optional[Any] = field(compare=False, default=None)
+	extra: Optional[Any] = field(compare=False, default=None)
 
 	@property
 	def isAddonEnabled(self) -> Optional[bool]:
@@ -196,7 +196,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		for addon in addonHandler.getAvailableAddons():
 			self.addToCacheOrUpdateDate(_AppData(
 				name=addon.manifest["summary"], version=addon.version, isAddon=True, is64bit=False,
-				additional={"name": addon.name, "author": addon.author}
+				extra={"name": addon.name, "author": addon.manifest["author"]}
 			))
 
 	@staticmethod
@@ -215,13 +215,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		returnable: str = ""
 		for appData in func():
 			line: str = ""
-			for property in ("name", "version", "is64bit", "isAddon", "isAddonEnabled"):
+			for property in ("name", "version", "is64bit", "isAddon", "isAddonEnabled", "extra"):
 				if property not in hideFields:
 					if property in transformFields:
 						result = (transformFields[property])(getattr(appData, property))
 					else:
 						result = getattr(appData, property)
-					line += f"{fieldStart}{result}{fieldEnd}"
+					# We only know how to display strings
+					if isinstance(result, str):
+						line += f"{fieldStart}{result}{fieldEnd}"
 			if line != "":
 				line = f"{lineStart}{line}{lineEnd}"
 				returnable += line
@@ -245,13 +247,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def getStructuredAppList(self, useHTML=False) -> str:
 		return self.createStructuredList(
-			self.generateAppsOnly, useHTML, hideFields=("isAddon", "isAddonEnabled"),
+			self.generateAppsOnly, useHTML, hideFields=("isAddon", "isAddonEnabled", "extra"),
 			transformFields={"is64bit": lambda x: "64 bit" if x else "32 bit"}
 		)
 
 	def getStructuredAddonList(self, useHTML=False) -> str:
 		return self.createStructuredList(
-			self.generateAddonsOnly, useHTML, hideFields=("isAddon", "is64bit", "isAddonEnabled")
+			self.generateAddonsOnly, useHTML, hideFields=("isAddon", "is64bit", "isAddonEnabled"),
+			transformFields={"extra": lambda x: x["author"]}
 		)
 
 	def showHTMLReport(self) -> None:
