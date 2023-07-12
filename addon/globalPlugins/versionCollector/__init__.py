@@ -38,11 +38,14 @@ class _AppData:
 	extra: Optional[Any] = field(compare=False, default=None)
 
 	@property
-	def isAddonEnabled(self) -> Optional[bool]:
+	def isAddonEnabled(self) -> bool:
 		"""A property that checks whether an NVDA add-on is enabled, and
-		returns the status. Returns None if not an add-on.
+		returns the status. Raises ValueError if not an add-on.
 		"""
-		return False # FixMe
+		if not self.isAddon:
+			raise ValueError(f"Tried to check running/enablement status for an app that is not an add-on ({self.name}).")
+		else:
+			return self.extra["enabled"]
 
 
 _appDataCache: List[_AppData] = []
@@ -196,7 +199,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		for addon in addonHandler.getAvailableAddons():
 			self.addToCacheOrUpdateDate(_AppData(
 				name=addon.manifest["summary"], version=addon.version, isAddon=True, is64bit=False,
-				extra={"name": addon.name, "author": addon.manifest["author"]}
+				extra={"name": addon.name, "author": addon.manifest["author"], "enabled": addon.isEnabled}
 			))
 
 	@staticmethod
@@ -253,8 +256,11 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	def getStructuredAddonList(self, useHTML=False) -> str:
 		return self.createStructuredList(
-			self.generateAddonsOnly, useHTML, hideFields=("isAddon", "is64bit", "isAddonEnabled"),
-			transformFields={"extra": lambda x: x["author"]}
+			self.generateAddonsOnly, useHTML, hideFields=("isAddon", "is64bit"),
+			transformFields={
+				"extra": lambda x: x["author"],
+				"isAddonEnabled": lambda x: "(enabled)" if x else "(disabled)"
+			}
 		)
 
 	def showHTMLReport(self) -> None:
