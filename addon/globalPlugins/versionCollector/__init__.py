@@ -5,8 +5,8 @@
 # See the file COPYING for more details.
 
 from datetime import datetime
-from typing import Callable, Optional, List, Dict
 from dataclasses import dataclass, field
+from typing import Callable, Optional, List, Dict, Any
 
 import globalPluginHandler
 import addonHandler
@@ -35,7 +35,7 @@ class _AppData:
 	lastSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
 	firstSeen: datetime.timestamp = field(compare=False, default_factory=lambda : datetime.timestamp(datetime.now()))
 	isAddon: bool = False  # Set True if this record represents an NVDA add-on
-	additional: Optional[str] = field(compare=False, default=None)
+	additional: Optional[Any] = field(compare=False, default=None)
 
 	@property
 	def isAddonEnabled(self) -> Optional[bool]:
@@ -195,7 +195,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		"""
 		for addon in addonHandler.getAvailableAddons():
 			self.addToCacheOrUpdateDate(_AppData(
-				name=addon.summary, version=addon.version, isAddon=True, is64bit=False
+				name=addon.manifest["summary"], version=addon.version, isAddon=True, is64bit=False,
+				additional={"name": addon.name, "author": addon.author}
 			))
 
 	@staticmethod
