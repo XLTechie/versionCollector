@@ -137,10 +137,15 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 	def script_showReport(self, gesture) -> None:
 		presses = getLastScriptRepeatCount()
 		if presses == 0:  # Pressed once
-			self.showHTMLReport()
+			try:
+				self.showReportTimer.Start(510)
+			except AttributeError:
+				self.showReportTimer = wx.CallLater(510, self.showHTMLReport)
 		elif presses == 1:  # Pressed twice
+			self.showReportTimer.Stop()
 			self.copyTextReport()
 		else:  # Pressed more than twice. Do nothing
+			self.showReportTimer.Stop()
 			return
 
 	def onAppSwitch(self) -> None:
@@ -271,7 +276,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		output += self.getStructuredAppList(True)
 		output += """</table><br><table style="margin-left: auto; margin-right: auto;">
 		<caption>List of NVDA add-ons:</caption>
-		<tr><th>NAME</th> <th>VERSION</th></tr>
+		<tr><th>NAME</th> <th>VERSION</th> <th>STATUS</th> <th>AUTHOR/PUBLISHER</th></tr>
 		"""
 		output += self.getStructuredAddonList(True)
 		output += """</table><br>
