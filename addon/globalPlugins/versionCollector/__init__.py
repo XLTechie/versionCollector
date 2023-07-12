@@ -26,8 +26,7 @@ from core import postNvdaStartup
 class _AppData:
 	"""Properties representing a piece of software by its metadata.
 	Metadata includes name, version, bitness, and last seen timestamp.
-	Because we also track NVDA add-ons, type (None for real programs) and state are stored.
-	When comparisons are made, the lastSeen, type, and isAddonEnabled are ignored.
+	Because we also track NVDA add-ons, various other metadata is stored.
 	"""
 	name: str
 	version: str = None
@@ -121,7 +120,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		post_appSwitch.register(self.onAppSwitch)
 		# Become aware of all NVDA add-ons
 		postNvdaStartup.register(self.retrieveInstalledAddons)
-		# Sead the pond
+		# Seed the pond
 		self.onAppSwitch()
 
 	def terminate(self) -> None:
@@ -131,12 +130,16 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
 	@script(
 		gesture="kb:NVDA+control+shift+v",
-		description=_("View the Version Collector report. Press twice to copy a text version to the clipboard."),
+		# Translators: An input help description of the report view and copy script.
+		description=_("Show the Version Collector report. Press twice to copy a text version to the clipboard."),
 		category=SCRCAT_TOOLS
 	)
 	def script_showReport(self, gesture) -> None:
 		presses = getLastScriptRepeatCount()
 		if presses == 0:  # Pressed once
+			# Use wx.CallLater to delay firing of the HTML based report long enough to determine
+			# whether a clipboard copy is what is actually being requested.
+			# If so, the wx.Timer is cancelled, but left available for later.
 			try:
 				self.showReportTimer.Start(510)
 			except AttributeError:
@@ -153,6 +156,7 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		obj = api.getForegroundObject()
 		# Handle a strange case. This is mentioned in core code. May not be complete solution. FixMe
 		if obj.processHandle == 0:
+			log.debug("\tRan into the obj.processHandle == 0 situation. Not recording a new app.")
 			return
 		currentApp: _AppData = self.normalizeAppInfo(
 			getattr(obj.appModule, "appName", None),
@@ -279,10 +283,14 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 		<tr><th>NAME</th> <th>VERSION</th> <th>STATUS</th> <th>AUTHOR/PUBLISHER</th></tr>
 		"""
 		output += self.getStructuredAddonList(True)
-		output += """</table><br>
-		<p>Use shift+arrow keys to select, ctrl+c to copy to clipboard.</p>
-		<p>Press escape when done.</p></body></html>"""
-		ui.browseableMessage(output, "Detected apps, add-ons, and versions", True)
+		output += "</table><br>\n<p>"
+		# Translators: Suggestions on how a user can interact with the Version Report.
+		output += _("Use shift+arrow keys to select, ctrl+c to copy to clipboard.")
+		output += "</p>\n<p>"
+		# Translators: Instruction to press escape to leave the report window.
+		output += _("Press escape when done.") + "</p>"
+		# Translators: Title of the Application Versions Report when shown in a webpage style.
+		ui.browseableMessage(output, _("Detected apps, add-ons, and versions"), True)
 
 	def copyTextReport(self) -> None:
 		output = "Applications:\n" + self.getStructuredAppList()
